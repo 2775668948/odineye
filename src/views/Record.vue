@@ -244,7 +244,7 @@
                             alt="劫">
                         <div class="corner-number ">10</div>
                     </div>
-                    <div class="image-container feika3">
+                    <div class="image-container feika4">
                         <img src="https://s-tft-api.op.gg/img/set/14/tft-champion/tiles/tft14_zeri.tft_set14.png?image=q_auto:good,f_webp&b=YYWBQnfWUKIR1zzRMhzVG"
                             alt="泽丽">
                         <div class="corner-number">10</div>
@@ -333,17 +333,28 @@
 
                 </div>
             </div>
+
+            <button @click="showMainWindow">111</button>
         </div>
     </div>
 </template>
 
 <script setup>
 import { ref } from 'vue'
+
+import { invoke } from "@tauri-apps/api/core";
 const isHovered = ref(false)
 
 const AllCards = ref([
 ])
-
+async function showMainWindow() {
+    try {
+        await invoke('showgmwindow');  // 调用后端命令展示指定窗口
+        console.log('已展示窗口');
+    } catch (error) {
+        console.error('展示窗口失败:', error);
+    }
+}
 
 const isClicked = ref(false)
 

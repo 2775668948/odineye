@@ -1,128 +1,163 @@
-// Prevents additional console window on Windows in release, DO NOT REMOVE!!
-#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
-use std::fs;
-use std::path::PathBuf;
-use std::process::Command;
+use tauri::AppHandle;
+use tauri::Manager;
+use tauri::Window;
 
-use base64;
-use regex::Regex;
-use reqwest::Client;
-use std::thread;
-use std::time::Duration;
+use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 
-fn find_lol_path() -> Option<PathBuf> {
-    let candidates = vec![
-        // 国服 QQ
-        "C:\\Program Files (x86)\\Tencent\\League of Legends\\LeagueClient.exe",
-        // 国服 Riot（通过 WeGame 安装）
-        "C:\\Riot Games\\League of Legends\\LeagueClient.exe",
-        // 英雄联盟手游模拟器版
-        "D:\\WeGameApps\\英雄联盟\\Launcher\\Client.exe", // 自定义安装路径等也可加入
-    ];
+use base64::{engine::general_purpose, Engine as _};
+use reqwest::{header, Client};
+use std::error::Error;
 
-    for path_str in candidates {
-        let path = PathBuf::from(path_str);
-        if path.exists() {
-            return Some(path);
+use odineye_lib::{get_lol_token, screen_shoct};
+
+use std::{thread, time};
+
+use irelia::{rest::LcuClient, RequestClient};
+use serde_json::Value;
+
+#[tauri::command]
+fn closegmwindow(window: Window) -> Result<(), String> {
+    println!("准备隐藏窗口: {}", window.label()); // 打印窗口标签名
+    match window.hide() {
+        Ok(_) => {
+            println!("窗口隐藏成功！");
+            Ok(())
+        }
+        Err(e) => {
+            println!("窗口隐藏失败: {}", e);
+            Err(e.to_string())
         }
     }
+}
 
-    None
+fn hello(name: &str) {
+    println!("Hello, {}!", name);
+    println!("okkkk");
 }
 
 #[tauri::command]
-fn start_lol() -> Result<String, String> {
-    // 尝试检测 LOL 安装路径
-    match find_lol_path() {
-        Some(lol_path) => {
-            // 启动 LOL 客户端
-            match Command::new(&lol_path).spawn() {
-                Ok(_) => Ok(format!("成功启动 LOL，路径为：{}", lol_path.display())),
-                Err(e) => Err(format!("启动失败: {}", e)),
-            }
+async fn closegmwindow2(window: Window) -> Result<(), String> {
+    println!("准备设置鼠标穿透: {}", window.label()); // 打印窗口标签名
+    match window.set_ignore_cursor_events(true) {
+        Ok(_) => {
+            println!("鼠标穿透设置成功！");
+            screen_shoct().await;
+            Ok(())
         }
-        None => Err("无法找到 League of Legends 安装路径，请手动配置".to_string()),
+        Err(e) => {
+            println!("鼠标穿透设置失败: {}", e);
+            Err(e.to_string())
+        }
     }
-} // 自动查找 LeagueClient.exe 的路径
+}
 
 #[tauri::command]
-pub async fn start_auto_accept() {
-    // 1. 读取 LeagueClientUx.exe 启动参数
-    let output = Command::new("cmd")
-        .args([
-            "/C",
-            "wmic PROCESS WHERE name='LeagueClientUx.exe' GET commandline",
-        ])
-        .output()
-        .expect("failed to execute wmic");
+fn showgmwindow(app: AppHandle) -> Result<(), String> {
+    if let Some(window) = app.get_webview_window("gamestart") {
+        window.show().map_err(|e| e.to_string())?; // 隐藏窗口
+        println!("已重新展示窗口: gamestart");
+        Ok(())
+    } else {
+        Err("找不到窗口: gamestart".to_string())
+    }
+}
 
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    println!("WMIC输出: {}", stdout);
+#[tauri::command]
+fn handle_tab_key_pressed() -> String {
+    // 处理 Tab 键按下后的逻辑
+    "快捷键被按下了".to_string()
+}
 
-    // 2. 正则匹配出port和token
-    let port_re = Regex::new(r"--app-port=(\d+)").unwrap();
-    let token_re = Regex::new(r"--remoting-auth-token=([\w-]+)").unwrap();
+fn startautoaccept() -> String {
+    // 处理 Tab 键按下后的逻辑
+    "后端自动开启对局已经Ok...".to_string()
+}
 
-    let port = port_re
-        .captures(&stdout)
-        .and_then(|caps| caps.get(1))
-        .map(|m| m.as_str().to_string())
-        .expect("没有找到 app-port");
+fn getlolinfo() -> String {
+    // 处理 Tab 键按下后的逻辑
+    "获取port和token...".to_string()
+}
 
-    let token = token_re
-        .captures(&stdout)
-        .and_then(|caps| caps.get(1))
-        .map(|m| m.as_str().to_string())
-        .expect("没有找到 remoting-auth-token");
+async fn init_config() {
+    println!("执行异步初始化逻辑");
+    // 异步代码，如网络请求、文件 IO 等
+    // autoaccept().await;
+    // get_lol_token().await;
+}
 
-    println!("解析成功：port={} token={}", port, token);
+async fn lcu_post_request(
+    port: u16,
+    token: &str,
+    endpoint: &str,
+) -> Result<String, Box<dyn Error>> {
+    // 构造 URL
+    let url = format!("https://127.0.0.1:{}{}", port, endpoint);
 
-    // 3. 启动循环定时检测ReadyCheck
-    let auth = base64::encode(format!("riot:{}", token));
+    // 构造 Base64 授权头
+    let auth_string = format!("riot:{}", token);
+    let auth_encoded = general_purpose::STANDARD.encode(auth_string);
+    let auth_header_value = format!("Basic {}", auth_encoded);
+
+    // 构造 Headers
+    let mut headers = header::HeaderMap::new();
+    headers.insert(header::ACCEPT, "application/json".parse()?);
+    headers.insert(header::CONTENT_TYPE, "application/json".parse()?);
+    headers.insert(header::AUTHORIZATION, auth_header_value.parse()?);
+
+    // 创建 Client，允许自签名证书
     let client = Client::builder()
-        .danger_accept_invalid_certs(true) // 本地自签证书
-        .build()
-        .unwrap();
+        .default_headers(headers)
+        .danger_accept_invalid_certs(true)
+        .build()?;
 
-    tauri::async_runtime::spawn(async move {
-        loop {
-            let res = client
-                .get(format!(
-                    "https://127.0.0.1:{}/lol-matchmaking/v1/ready-check",
-                    port
-                ))
-                .header("Authorization", format!("Basic {}", auth))
-                .send()
-                .await;
+    // 发起 GET 请求
+    let response = client.get(&url).send().await?;
 
-            if let Ok(response) = res {
-                if response.status().is_success() {
-                    if let Ok(json) = response.json::<serde_json::Value>().await {
-                        if json["state"] == "InProgress" {
-                            println!("检测到对局，自动接受！");
-                            let _ = client
-                                .post(format!(
-                                    "https://127.0.0.1:{}/lol-matchmaking/v1/ready-check/accept",
-                                    port
-                                ))
-                                .header("Authorization", format!("Basic {}", auth))
-                                .send()
-                                .await;
-                        }
-                    }
-                }
-            } else {
-                println!("请求失败，可能是客户端未启动");
-            }
-
-            thread::sleep(Duration::from_secs(1)); // 每1秒检查一次
-        }
-    });
+    // 返回文本内容
+    let result = response.text().await?;
+    Ok(result)
 }
+
+async fn autoaccept() -> Result<String, String> {
+    println!("开启自动接受对局功能");
+    let port = 63304;
+    let token = "Y9X1aNkE6yzyZhcX9znzQw";
+    let endpoint = "/lol-matchmaking/v1/ready-check/accept";
+    loop {
+        println!("检查是否开启对局...");
+        match lcu_post_request(port, token, endpoint).await {
+            Ok(res) => {
+                println!("自动接受对局成功: {}", res);
+            }
+            Err(err) => {
+                eprintln!("自动接受对局失败: {}", err);
+            }
+        }
+        thread::sleep(time::Duration::from_secs(1)); // 每5秒检查一次准备状态
+    }
+}
+
+#[tauri::command]
+fn enable_click_through(window: tauri::Window) {}
 
 fn main() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![start_lol])
+        .setup(|app| {
+            println!("Tauri 后端初始化逻辑运行！");
+            // 这里可以做比如路径缓存加载、配置初始化等
+            tauri::async_runtime::spawn(async {
+                init_config().await;
+            });
+            Ok(())
+        })
+        .plugin(tauri_plugin_global_shortcut::Builder::new().build())
+        .invoke_handler(tauri::generate_handler![
+            closegmwindow,
+            showgmwindow,
+            handle_tab_key_pressed,
+            enable_click_through,
+            closegmwindow2
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

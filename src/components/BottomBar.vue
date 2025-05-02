@@ -6,10 +6,6 @@
             辅助设置
         </button>
 
-        <n-button @click="handleClick">
-            点它
-        </n-button>
-
 
 
         <!-- 右边：开始游戏 + 客服 -->

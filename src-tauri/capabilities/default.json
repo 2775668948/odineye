@@ -6,7 +6,8 @@
     "main"
   ],
   "permissions": [
-    "core:default",
-    "opener:default"
+    "global-shortcut:allow-is-registered",
+    "global-shortcut:allow-register",
+    "global-shortcut:allow-unregister"
   ]
 }

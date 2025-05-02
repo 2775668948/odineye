@@ -3,6 +3,19 @@ import LeftMenu from '../components/leftMenu.vue'
 import BottomBar from '../components/BottomBar.vue'
 import MainList from "../components/TypeList.vue"
 
+import { onMounted } from 'vue'
+import { invoke } from '@tauri-apps/api/core';
+import { register } from '@tauri-apps/plugin-global-shortcut';
+
+const registerKey = async () => {
+}
+
+
+
+onMounted(async () => {
+
+})
+
 </script>
 
 <template>

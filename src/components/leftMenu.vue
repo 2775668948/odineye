@@ -19,7 +19,7 @@
                 <span>英雄联盟</span>
             </div>
             <div class="menu-item" :class="{ active: activeMenu === 'tft' }" @click="gotftMain">
-                <img src="../assets/lol.png" class="icon" alt="云顶之弈" />
+                <img src="../assets/tft.png" class="icon" alt="云顶之弈" />
                 <span>云顶之弈</span>
             </div>
         </nav>
@@ -44,14 +44,14 @@ const gololMain = () => {
     console.log("这是lol界面")
     activeMenu.value = "lol"
     //路由跳转
-    router.push("/LolMain") // 或者 name: 'LolMain'
+    router.push({ name: 'esports' })
 }
 
 const gotftMain = () => {
 
     console.log("这是TFT界面")
     activeMenu.value = "tft"
-    router.push("tftMain") // 或者 name: 'LolMain'
+    router.push({ name: "tftMain" }) // 或者 name: 'LolMain'
 }
 </script>
 

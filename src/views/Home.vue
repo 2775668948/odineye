@@ -33,7 +33,7 @@ onMounted(async () => {
             <!-- 主内容区域（阵容列表） -->
             <div class="body-section">
                 <slot name="body" />
-                <MainList></MainList>
+               <router-view />
             </div>
 
             <!-- 底部栏 -->

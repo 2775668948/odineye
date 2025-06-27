@@ -34,7 +34,7 @@
         "decorations": false,
         "alwaysOnTop": false,
         "transparent": true,
-        "visible": false,
+        "visible": true,
         "url": "/record"
       },
       {

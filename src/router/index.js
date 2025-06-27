@@ -9,11 +9,33 @@ import { path } from '@tauri-apps/api';
 
 import Gameing from '../views/Gameing.vue';
 
+import MainList from "../components/TypeList.vue"
+
+// lol的主要界面
+import LolMain from "../views/lolMain.vue"
+
 const routes = [
     {
         path: '/',       // 访问 localhost:端口/ 时显示
         name: 'Home',
-        component: Home
+        component: Home,
+        children: [
+            {
+                path: '/',
+                name: 'LolMain',
+                component: LolMain
+            },
+            {
+                path: '/LolMain',
+                name: 'LolMainA',
+                component: LolMain
+            },
+            {
+                path: "/tftMain",
+                name: "tftMain",
+                component: MainList
+            }
+        ]
     },
     {
         path: '/record',       // 访问 localhost:端口/ 时显示

@@ -14,11 +14,11 @@
 
         <!-- 菜单项 -->
         <nav class="menu">
-            <div class="menu-item" :class="{ active: activeMenu === 'lol' }" @click="activeMenu = 'lol'">
+            <div class="menu-item" :class="{ active: activeMenu === 'lol' }" @click="gololMain">
                 <img src="../assets/lol.png" class="icon" alt="英雄联盟" />
                 <span>英雄联盟</span>
             </div>
-            <div class="menu-item" :class="{ active: activeMenu === 'tft' }" @click="activeMenu = 'tft'">
+            <div class="menu-item" :class="{ active: activeMenu === 'tft' }" @click="gotftMain">
                 <img src="../assets/lol.png" class="icon" alt="云顶之弈" />
                 <span>云顶之弈</span>
             </div>
@@ -33,8 +33,26 @@
 
 <script setup>
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 
-const activeMenu = ref('lol') // 默认选中英雄联盟
+const router = useRouter()
+let activeMenu = ref('lol') // 默认选中英雄联盟
+
+
+const gololMain = () => {
+
+    console.log("这是lol界面")
+    activeMenu.value = "lol"
+    //路由跳转
+    router.push("/LolMain") // 或者 name: 'LolMain'
+}
+
+const gotftMain = () => {
+
+    console.log("这是TFT界面")
+    activeMenu.value = "tft"
+    router.push("tftMain") // 或者 name: 'LolMain'
+}
 </script>
 
 <style scoped>

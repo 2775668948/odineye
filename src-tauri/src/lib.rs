@@ -6,7 +6,10 @@ use std::fs::File;
 use std::io::Write;
 use std::path::Path;
 use std::time::Instant;
+use tauri_plugin_global_shortcut::{Builder, Shortcut, ShortcutEvent};
 use xcap::Monitor;
+
+use tauri::AppHandle;
 
 fn normalized(filename: String) -> String {
     filename.replace(['|', '\\', ':', '/'], "")
@@ -35,3 +38,4 @@ pub async fn screen_shoct() {
 
     println!("屏幕截图成功")
 }
+

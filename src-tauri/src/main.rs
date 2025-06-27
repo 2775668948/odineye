@@ -1,3 +1,5 @@
+mod lcu;
+
 use tauri::AppHandle;
 use tauri::Manager;
 use tauri::Window;
@@ -83,6 +85,15 @@ async fn init_config() {
     // 异步代码，如网络请求、文件 IO 等
     // autoaccept().await;
     // get_lol_token().await;
+    // 调用同步函数，直接写，不需要 .await
+    match lcu::get_riot_token_and_port() {
+        Ok((token, port)) => {
+            println!("获取到 token: {}, port: {}", token, port);
+        }
+        Err(e) => {
+            eprintln!("获取失败: {}", e);
+        }
+    }
 }
 
 async fn lcu_post_request(
@@ -143,8 +154,26 @@ fn enable_click_through(window: tauri::Window) {}
 fn main() {
     tauri::Builder::default()
         .setup(|app| {
+            #[cfg(desktop)]
+            {
+                use tauri::Manager;
+                use tauri_plugin_global_shortcut::{Code, Modifiers, ShortcutState};
+
+                app.handle().plugin(
+                    tauri_plugin_global_shortcut::Builder::new()
+                        .with_shortcuts(["ctrl+d", "alt+space"])?
+                        .with_handler(|app, shortcut, event| {
+                            if event.state == ShortcutState::Pressed {
+                                if shortcut.matches(Modifiers::CONTROL, Code::KeyD) {
+                                    println!("Tauri KKKK");
+                                }
+                                if shortcut.matches(Modifiers::ALT, Code::Space) {}
+                            }
+                        })
+                        .build(),
+                )?;
+            }
             println!("Tauri 后端初始化逻辑运行！");
-            // 这里可以做比如路径缓存加载、配置初始化等
             tauri::async_runtime::spawn(async {
                 init_config().await;
             });

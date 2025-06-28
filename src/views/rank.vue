@@ -45,8 +45,10 @@
             </div>
         </div>
     </div>
-    <div>
-        123
+    <div class="show-result">
+        <div class="table-data">
+            <n-data-table :columns="columns" :data="data" :bordered="false" :max-height="450" />
+        </div>
     </div>
 </template>
 
@@ -86,6 +88,61 @@ const handleSearch = () => {
     console.log('Selected Mode:', selectedMode.value);
     console.log('Selected Lane:', selectedLane.value);
 };
+
+
+const columns = [
+    {
+        title: "排名",
+        key: "rank",
+    },
+    {
+        title: "位置",
+        key: "position",
+    },
+    {
+        title: "英雄",
+        key: "hero",
+    },
+    {
+        title: "层级",
+        key: "level",
+    },
+    {
+        title: "胜率",
+        key: "winRate",
+    },
+    {
+        title: "禁用率",
+        key: "banRate",
+    },
+    {
+        title: "出场率",
+        key: "pickRate",
+    },
+];
+
+// 渲染个80条虚拟数据
+// const pagination = ref({
+//     page: 1,
+//     pageSize: 10,
+//     pageCount: 8,
+//     itemCount: 80
+// });
+
+// 模拟数据
+
+const data = Array.from({ length: 80 }, (_, index) => ({
+    rank: index + 1,
+    position: ["上路", "中路", "下路", "打野", "辅助"][Math.floor(Math.random() * 5)],
+    hero: `英雄${String.fromCharCode(65 + (index % 26))}`,
+    level: Math.floor(Math.random() * 6) + 1,
+    winRate: Math.floor(Math.random() * 101),
+    banRate: Math.floor(Math.random() * 101),
+    pickRate: Math.floor(Math.random() * 101)
+}));
+
+
+
 </script>
 
 <style scoped>
@@ -258,6 +315,7 @@ header-mid-content-lang>div {
     justify-content: flex-start;
     align-items: stretch;
     padding: 0;
+    margin-top: 8px;
 }
 
 .dropdown-panel2 {
@@ -277,6 +335,18 @@ header-mid-content-lang>div {
     justify-content: flex-start;
     align-items: stretch;
     padding: 0;
+    margin-top: 8px;
+}
 
+
+.show-result {
+    margin-top: 10px;
+    height: 500px;
+}
+
+.table-data {
+    width: 100%;
+    height: 100%;
+    overflow: auto;
 }
 </style>

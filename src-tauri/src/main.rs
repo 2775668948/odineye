@@ -17,6 +17,10 @@ use std::{thread, time};
 use irelia::{rest::LcuClient, RequestClient};
 use serde_json::Value;
 
+// 全局token和port
+static mut LOL_TOKEN: String = String::new();
+static mut LOL_PORT: u16 = 0;
+
 #[tauri::command]
 fn closegmwindow(window: Window) -> Result<(), String> {
     println!("准备隐藏窗口: {}", window.label()); // 打印窗口标签名
@@ -89,6 +93,10 @@ async fn init_config() {
     match lcu::get_riot_token_and_port() {
         Ok((token, port)) => {
             println!("获取到 token: {}, port: {}", token, port);
+            unsafe {
+                LOL_TOKEN = token;
+                LOL_PORT = port;
+            }
         }
         Err(e) => {
             eprintln!("获取失败: {}", e);
@@ -96,63 +104,43 @@ async fn init_config() {
     }
 }
 
-async fn lcu_post_request(
-    port: u16,
-    token: &str,
-    endpoint: &str,
-) -> Result<String, Box<dyn Error>> {
-    // 构造 URL
-    let url = format!("https://127.0.0.1:{}{}", port, endpoint);
-
-    // 构造 Base64 授权头
-    let auth_string = format!("riot:{}", token);
-    let auth_encoded = general_purpose::STANDARD.encode(auth_string);
-    let auth_header_value = format!("Basic {}", auth_encoded);
-
-    // 构造 Headers
-    let mut headers = header::HeaderMap::new();
-    headers.insert(header::ACCEPT, "application/json".parse()?);
-    headers.insert(header::CONTENT_TYPE, "application/json".parse()?);
-    headers.insert(header::AUTHORIZATION, auth_header_value.parse()?);
-
-    // 创建 Client，允许自签名证书
-    let client = Client::builder()
-        .default_headers(headers)
-        .danger_accept_invalid_certs(true)
-        .build()?;
-
-    // 发起 GET 请求
-    let response = client.get(&url).send().await?;
-
-    // 返回文本内容
-    let result = response.text().await?;
-    Ok(result)
-}
-
-async fn autoaccept() -> Result<String, String> {
-    println!("开启自动接受对局功能");
-    let port = 63304;
-    let token = "Y9X1aNkE6yzyZhcX9znzQw";
-    let endpoint = "/lol-matchmaking/v1/ready-check/accept";
-    loop {
-        println!("检查是否开启对局...");
-        match lcu_post_request(port, token, endpoint).await {
-            Ok(res) => {
-                println!("自动接受对局成功: {}", res);
-            }
-            Err(err) => {
-                eprintln!("自动接受对局失败: {}", err);
-            }
-        }
-        thread::sleep(time::Duration::from_secs(1)); // 每5秒检查一次准备状态
-    }
-}
+// async fn autoaccept() -> Result<String, String> {
+//     println!("开启自动接受对局功能");
+//     let port = 63304;
+//     let token = "Y9X1aNkE6yzyZhcX9znzQw";
+//     let endpoint = "/lol-matchmaking/v1/ready-check/accept";
+//     loop {
+//         println!("检查是否开启对局...");
+//         match lcu_post_request(port, token, endpoint).await {
+//             Ok(res) => {
+//                 println!("自动接受对局成功: {}", res);
+//             }
+//             Err(err) => {
+//                 eprintln!("自动接受对局失败: {}", err);
+//             }
+//         }
+//         thread::sleep(time::Duration::from_secs(1)); // 每5秒检查一次准备状态
+//     }
+// }
 
 #[tauri::command]
 fn enable_click_through(window: tauri::Window) {}
 
+#[tauri::command]
+// 返回port和token给前端
+fn return_port_and_token() -> Result<(String, u16), String> {
+    println!("前端获取token...");
+    unsafe {
+        if LOL_TOKEN.is_empty() || LOL_PORT == 0 {
+            return Err("未获取到有效的 token 或 port".to_string());
+        }
+        Ok((LOL_TOKEN.clone(), LOL_PORT))
+    }
+}
+
 fn main() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_http::init())
         .setup(|app| {
             #[cfg(desktop)]
             {
@@ -185,7 +173,8 @@ fn main() {
             showgmwindow,
             handle_tab_key_pressed,
             enable_click_through,
-            closegmwindow2
+            closegmwindow2,
+            return_port_and_token
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

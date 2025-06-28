@@ -6,8 +6,21 @@
     "main"
   ],
   "permissions": [
-    "global-shortcut:allow-is-registered",
-    "global-shortcut:allow-register",
-    "global-shortcut:allow-unregister"
+    {
+      "identifier": "http:default",
+      "allow": [
+        {
+          "url": "https://*.tauri.app"
+        },
+        {
+          "url": "http://www.baidu.com/*"
+        }
+      ],
+      "deny": [
+        {
+          "url": "https://private.tauri.app"
+        }
+      ]
+    }
   ]
 }

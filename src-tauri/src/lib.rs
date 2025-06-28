@@ -38,4 +38,3 @@ pub async fn screen_shoct() {
 
     println!("屏幕截图成功")
 }
-

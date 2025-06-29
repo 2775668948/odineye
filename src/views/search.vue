@@ -479,14 +479,12 @@ const getCurrentPlayerRank = async (summonerId) => {
 // 根据玩家的puuid获取段位信息
 const getUserDivisionByPuuid = async (puuid) => {
     const res = await getDivisionByPuuid(puuid);
-    console.log("获取到的当前玩家段位信息:", JSON.parse(res))
-    const queuesInfo = JSON.parse(res)
-    const queues = queuesInfo.queues
-    console.log(queues)
+    const queuesInfo = JSON.parse(res);
+    console.log("获取到的当前玩家段位信息:", queuesInfo);
+
+    const queues = queuesInfo.queues || [];
     const solo = queues.find(q => q.queueType === 'RANKED_SOLO_5x5');
     const flex = queues.find(q => q.queueType === 'RANKED_FLEX_SR');
-    console.log(solo)
-    console.log(flex)
 
     const tierMap = {
         IRON: "坚韧黑铁",
@@ -501,35 +499,27 @@ const getUserDivisionByPuuid = async (puuid) => {
         CHALLENGER: "最强王者"
     };
 
-    // 单双段位转换成中文
-    const { tier, division, leaguePoints } = solo;
+    const formatRank = (rank) => {
+        if (!rank) return { text: "未定级", lp: 0 };
+        const tierCN = tierMap[rank.tier] || rank.tier;
+        const division = rank.division || "";
+        const lp = rank.leaguePoints || 0;
 
+        if (["MASTER", "GRANDMASTER", "CHALLENGER"].includes(rank.tier)) {
+            return { text: `${tierCN}`, lp };
+        } else {
+            return { text: `${tierCN} ${division}`, lp };
+        }
+    };
 
-    const userflexTier = flex.tier
+    const soloRank = formatRank(solo);
+    const flexRank = formatRank(flex);
 
-    const userflexDivision = flex.division
-
-    const userflexLeaguePoints = flex.leaguePoints
-
-    const solotierCN = tierMap[tier] || tier;
-
-    const flextierCn = tierMap[userflexTier] || userflexTier;
-
-    // 大师以上没有小段位 只有点数
-    if (["MASTER", "GRANDMASTER", "CHALLENGER"].includes(tier)) {
-        usersolo.value = solotierCN
-        usersolopoint.value = leaguePoints
-        userflex.value = flextierCn
-        userflexpoint.value = userflexLeaguePoints
-    } else {
-        // 剩下就是些低分仔了
-        usersolo.value = solotierCN + division
-        usersolopoint.value = leaguePoints
-        userflex.value = flextierCn + userflexDivision
-        userflexpoint.value = userflexLeaguePoints
-    }
-
-}
+    usersolo.value = soloRank.text;
+    usersolopoint.value = soloRank.lp;
+    userflex.value = flexRank.text;
+    userflexpoint.value = flexRank.lp;
+};
 </script>
 
 

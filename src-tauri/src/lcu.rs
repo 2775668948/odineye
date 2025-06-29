@@ -118,8 +118,8 @@ fn get_process_command_line(pid: u32) -> windows::core::Result<String> {
 }
 
 fn extract_token_and_port(cmdline: &str) -> Option<(String, u16)> {
-    let re_token = Regex::new(r#"--riotclient-auth-token=("[^"]+"|[^\s"]+)"#).ok()?;
-    let re_port = Regex::new(r#"--riotclient-app-port=("[^"]+"|[^\s"]+)"#).ok()?;
+    let re_token = Regex::new(r#"--remoting-auth-token=("[^"]+"|[^\s"]+)"#).ok()?;
+    let re_port = Regex::new(r#"--app-port=("[^"]+"|[^\s"]+)"#).ok()?;
 
     let token = re_token
         .captures(cmdline)
@@ -151,37 +151,4 @@ pub fn get_riot_token_and_port() -> Result<(String, u16), String> {
     }
 
     Err("未能提取 token 或 port".into())
-}
-
-async fn lcu_post_request(
-    port: u16,
-    token: &str,
-    endpoint: &str,
-) -> Result<String, Box<dyn Error>> {
-    // 构造 URL
-    let url = format!("https://127.0.0.1:{}{}", port, endpoint);
-
-    // 构造 Base64 授权头
-    let auth_string = format!("riot:{}", token);
-    let auth_encoded = general_purpose::STANDARD.encode(auth_string);
-    let auth_header_value = format!("Basic {}", auth_encoded);
-
-    // 构造 Headers
-    let mut headers = header::HeaderMap::new();
-    headers.insert(header::ACCEPT, "application/json".parse()?);
-    headers.insert(header::CONTENT_TYPE, "application/json".parse()?);
-    headers.insert(header::AUTHORIZATION, auth_header_value.parse()?);
-
-    // 创建 Client，允许自签名证书
-    let client = Client::builder()
-        .default_headers(headers)
-        .danger_accept_invalid_certs(true)
-        .build()?;
-
-    // 发起 GET 请求
-    let response = client.get(&url).send().await?;
-
-    // 返回文本内容
-    let result = response.text().await?;
-    Ok(result)
 }

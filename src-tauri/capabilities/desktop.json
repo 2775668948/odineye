@@ -9,6 +9,14 @@
     "main"
   ],
   "permissions": [
-    "global-shortcut:default"
+    "global-shortcut:default",
+    {
+      "identifier": "http:default",
+      "allow": [
+        {
+          "url": "https://**"
+        }
+      ]
+    }
   ]
 }

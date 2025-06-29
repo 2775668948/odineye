@@ -16,6 +16,7 @@ use std::{thread, time};
 
 use irelia::{rest::LcuClient, RequestClient};
 use serde_json::Value;
+use tauri_plugin_http;
 
 // 全局token和port
 static mut LOL_TOKEN: String = String::new();
@@ -138,43 +139,49 @@ fn return_port_and_token() -> Result<(String, u16), String> {
     }
 }
 
+#[tauri::command]
+async fn lcu_post_request(endpoint: String) -> Result<String, String> {
+    let port = unsafe { LOL_PORT };
+    let token = unsafe { LOL_TOKEN.clone() };
+    let url = format!("https://127.0.0.1:{}{}", port, endpoint);
+
+    let auth_string = format!("riot:{}", token);
+    let auth_encoded = general_purpose::STANDARD.encode(auth_string);
+    let auth_header_value = format!("Basic {}", auth_encoded);
+
+    let mut headers = header::HeaderMap::new();
+    headers.insert(header::ACCEPT, "application/json".parse().unwrap());
+    headers.insert(header::CONTENT_TYPE, "application/json".parse().unwrap());
+    headers.insert(header::AUTHORIZATION, auth_header_value.parse().unwrap());
+
+    let client = reqwest::Client::builder()
+        .default_headers(headers)
+        .danger_accept_invalid_certs(true)
+        .build()
+        .map_err(|e| e.to_string())?;
+    println!("请求的URL-->: {}", url);
+    let response = client.get(&url).send().await.map_err(|e| e.to_string())?;
+    let result = response.text().await.map_err(|e| e.to_string())?;
+    Ok(result)
+}
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_http::init())
         .setup(|app| {
-            #[cfg(desktop)]
-            {
-                use tauri::Manager;
-                use tauri_plugin_global_shortcut::{Code, Modifiers, ShortcutState};
-
-                app.handle().plugin(
-                    tauri_plugin_global_shortcut::Builder::new()
-                        .with_shortcuts(["ctrl+d", "alt+space"])?
-                        .with_handler(|app, shortcut, event| {
-                            if event.state == ShortcutState::Pressed {
-                                if shortcut.matches(Modifiers::CONTROL, Code::KeyD) {
-                                    println!("Tauri KKKK");
-                                }
-                                if shortcut.matches(Modifiers::ALT, Code::Space) {}
-                            }
-                        })
-                        .build(),
-                )?;
-            }
-            println!("Tauri 后端初始化逻辑运行！");
             tauri::async_runtime::spawn(async {
                 init_config().await;
             });
             Ok(())
         })
-        .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .invoke_handler(tauri::generate_handler![
             closegmwindow,
             showgmwindow,
             handle_tab_key_pressed,
             enable_click_through,
             closegmwindow2,
-            return_port_and_token
+            return_port_and_token,
+            lcu_post_request
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

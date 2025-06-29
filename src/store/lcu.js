@@ -9,5 +9,13 @@ export default {
             state.token = payload.token;
             state.port = payload.port;
         }
+    },
+    getters: {
+        getTokenAndPort: state => {
+            return {
+                token: state.token,
+                port: state.port
+            };
+        }
     }
 };

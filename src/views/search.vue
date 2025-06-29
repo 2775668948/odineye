@@ -19,10 +19,10 @@
                 <div class="search-duanwei">
                     <!-- 左边的单双段位 -->
                     <div class="search-duanwei-left">
-                        <span>单: 坚韧黑铁1(26)</span>
+                        <span>单: {{ usersolo }}({{ usersolopoint }})</span>
                     </div>
                     <div class="search-duanwei-right">
-                        <span>灵: 坚韧黑铁3(90)</span>
+                        <span>灵: {{ userflex }}({{ userflexpoint }})</span>
                     </div>
                 </div>
                 <!-- 下面的最近常玩 -->
@@ -188,7 +188,22 @@
 </template>
 <script setup>
 import { ref, computed } from 'vue';
+
+import { getCurrentPlayer, getRankedStatsByPuuid, getDivisionByPuuid } from "../api/index.js";
+import { invoke } from '@tauri-apps/api/core';
 const palayerName = ref('');
+
+// 玩家的单双段位
+const usersolo = ref("")
+
+// 玩家的单双胜点
+const usersolopoint = ref("")
+
+// 玩家的灵活段位 =
+const userflex = ref("")
+
+// 玩家的灵活胜点
+const userflexpoint = ref("")
 
 
 // 模拟的战绩数据
@@ -433,28 +448,88 @@ const handleCopyNickName = (nickname) => {
 
 
 // 处理搜索按钮点击事件
-const handleSearchPlayer = () => {
-    console.log('搜索 button clicked!');
-    // 这里可以添加搜索逻辑
-    // 比如调用API获取数据等
-    // 目前只是打印选中的模式
-    console.log('palayerName:', palayerName.value);
-    // 如果是空的，那么就是查询当前玩家的战绩
-    if (palayerName.value.trim() === '') {
-        console.log('查询当前玩家的战绩');
-        // 这里可以添加查询当前玩家战绩的逻辑
-        getCurrentPlayerStats();
-    } else {
-        console.log('查询其他玩家的战绩:', palayerName.value);
-        // 这里可以添加查询其他玩家战绩的逻辑
-    }
+const handleSearchPlayer = async () => {
+    const res = await getCurrentPlayer();
+    console.log("当前玩家信息:", JSON.parse(res));
+    let userinfo = JSON.parse(res);
+    // 玩家昵称
+    palayerName.value = userinfo.gameName + "" + "#" + userinfo.tagLine;
+    // 获取rank信息
+    await getCurrentPlayerRank(userinfo.summonerId)
+    // 获取段位信息
+    await getUserDivisionByPuuid(userinfo.puuid)
 };
+
+
 
 // 获取当前玩家的战绩
 const getCurrentPlayerStats = () => {
     // 这里可以添加获取当前玩家战绩的逻辑
     console.log('从Lcu获取当前玩家的战绩...');
+
 };
+
+// 根据summonerId获取当前玩家的战绩
+const getCurrentPlayerRank = async (summonerId) => {
+    // 调用Tauri命令获取当前玩家信息
+    const res = await getRankedStatsByPuuid(summonerId);
+    console.log("获取到的当前玩家Rank信息:", JSON.parse(res));
+};
+
+// 根据玩家的puuid获取段位信息
+const getUserDivisionByPuuid = async (puuid) => {
+    const res = await getDivisionByPuuid(puuid);
+    console.log("获取到的当前玩家段位信息:", JSON.parse(res))
+    const queuesInfo = JSON.parse(res)
+    const queues = queuesInfo.queues
+    console.log(queues)
+    const solo = queues.find(q => q.queueType === 'RANKED_SOLO_5x5');
+    const flex = queues.find(q => q.queueType === 'RANKED_FLEX_SR');
+    console.log(solo)
+    console.log(flex)
+
+    const tierMap = {
+        IRON: "坚韧黑铁",
+        BRONZE: "英勇青铜",
+        SILVER: "不屈白银",
+        GOLD: "荣耀黄金",
+        PLATINUM: "华贵铂金",
+        EMERALD: "流光翡翠",
+        DIAMOND: "璀璨钻石",
+        MASTER: "超凡大师",
+        GRANDMASTER: "傲世宗师",
+        CHALLENGER: "最强王者"
+    };
+
+    // 单双段位转换成中文
+    const { tier, division, leaguePoints } = solo;
+
+
+    const userflexTier = flex.tier
+
+    const userflexDivision = flex.division
+
+    const userflexLeaguePoints = flex.leaguePoints
+
+    const solotierCN = tierMap[tier] || tier;
+
+    const flextierCn = tierMap[userflexTier] || userflexTier;
+
+    // 大师以上没有小段位 只有点数
+    if (["MASTER", "GRANDMASTER", "CHALLENGER"].includes(tier)) {
+        usersolo.value = solotierCN
+        usersolopoint.value = leaguePoints
+        userflex.value = flextierCn
+        userflexpoint.value = userflexLeaguePoints
+    } else {
+        // 剩下就是些低分仔了
+        usersolo.value = solotierCN + division
+        usersolopoint.value = leaguePoints
+        userflex.value = flextierCn + userflexDivision
+        userflexpoint.value = userflexLeaguePoints
+    }
+
+}
 </script>
 
 
@@ -518,6 +593,7 @@ const getCurrentPlayerStats = () => {
     margin-left: 10px;
     margin-top: 2px;
     width: 100px;
+    color: white;
 }
 
 .search-input {
@@ -525,10 +601,11 @@ const getCurrentPlayerStats = () => {
     width: 100%;
     height: 20px;
     background-color: #101323;
-    color: #8D8D8D;
+    color: white;
     border: none;
     outline: none;
     font-size: 12px;
+    ;
 }
 
 /* input框点击的样式 */

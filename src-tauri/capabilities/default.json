@@ -10,15 +10,16 @@
       "identifier": "http:default",
       "allow": [
         {
-          "url": "https://*.tauri.app"
+          "url": "http://**"
         },
         {
-          "url": "http://www.baidu.com/*"
-        }
-      ],
-      "deny": [
+          "url": "https://**"
+        },
         {
-          "url": "https://private.tauri.app"
+          "url": "http://*:*"
+        },
+        {
+          "url": "https://*:*"
         }
       ]
     }
